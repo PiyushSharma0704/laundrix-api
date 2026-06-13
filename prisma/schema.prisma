@@ -36,6 +36,8 @@ model User {
   email         String   @unique
   passwordHash  String
 
+  refreshToken  String?
+
   firstName     String?
   lastName      String?
 
