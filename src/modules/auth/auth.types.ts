@@ -1,10 +1,7 @@
 // auth.types.ts
+import { z } from "zod";
+import { registerSchema, loginSchema } from "./auth.validation";
 
-export interface RegisterDto {
-  storeName: string;
-  storeSlug: string;
-  email: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-}
+export type RegisterDto = z.infer<typeof registerSchema>["body"];
+
+export type LoginDto = z.infer<typeof loginSchema>["body"];

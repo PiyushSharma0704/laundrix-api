@@ -1,15 +1,16 @@
+// auth.routes.ts
 import { Router } from "express";
 import * as authController from "./auth.controller";
+import { authMiddleware } from "../../middleware/auth.middleware"; // instead of @/middleware/...
+import { validate } from "../../middleware/validate.middleware";
+
+import { registerSchema, loginSchema, refreshSchema, changePasswordSchema } from "./auth.validation";
 
 const router = Router();
 
-router.post(
-  "/register",
-  authController.register
-);
+router.post("/register", validate(registerSchema), authController.register);
 
-router.post("/login", authController.login);
-
+router.post("/login", validate(loginSchema), authController.login);
 
 router.get("/", (req, res) => {
   res.json({
@@ -18,16 +19,12 @@ router.get("/", (req, res) => {
   });
 });
 
+router.post("/refresh", validate(refreshSchema), authController.refresh);
 
-// router.post(
-//   "/login",
-//   authController.login
-// );
+router.get("/me", authMiddleware, authController.me);
 
-// router.get(
-//   "/me",
-//   authMiddleware ,
-//   authController.me
-// );
+router.post("/logout", authMiddleware, authController.logout);
+
+router.post("/change-password", authMiddleware, validate(changePasswordSchema), authController.changePassword);
 
 export default router;
