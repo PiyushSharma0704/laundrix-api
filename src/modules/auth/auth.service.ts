@@ -16,28 +16,11 @@ export const register = async (data: RegisterDto) => {
     },
   });
 
-  const existingStore = await prisma.store.findUnique({
-    where: {
-      slug: data.storeSlug,
-    },
-  });
-
   if (existingUser) {
     throw new Error("User already exists");
   }
 
-  if (existingStore) {
-    throw new Error("Store slug already exists");
-  }
-
   const passwordHash = await hashPassword(data.password);
-
-  const store = await prisma.store.create({
-    data: {
-      name: data.storeName,
-      slug: data.storeSlug,
-    },
-  });
 
   const user = await prisma.user.create({
     data: {
@@ -46,14 +29,13 @@ export const register = async (data: RegisterDto) => {
       firstName: data.firstName,
       lastName: data.lastName,
       role: UserRole.OWNER,
-      storeId: store.id,
     },
   });
 
   const { passwordHash: _, ...safeUser } = user;
+
   return {
     user: safeUser,
-    store,
   };
 };
 

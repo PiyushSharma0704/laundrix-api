@@ -2,23 +2,7 @@ import { z } from "zod";
 
 export const registerSchema = z.object({
   body: z.object({
-    storeName: z
-      .string()
-      .trim()
-      .min(3)
-      .max(100),
-
-    storeSlug: z
-      .string()
-      .trim()
-      .min(3)
-      .max(100)
-      .regex(/^[a-z0-9-]+$/),
-
-    email: z
-      .string()
-      .trim()
-      .email(),
+    email: z.string().trim().email(),
 
     password: z
       .string()
@@ -29,17 +13,9 @@ export const registerSchema = z.object({
         "Password must contain uppercase, lowercase, number and special character"
       ),
 
-    firstName: z
-      .string()
-      .trim()
-      .min(2)
-      .max(50),
+    firstName: z.string().trim().min(2).max(50),
 
-    lastName: z
-      .string()
-      .trim()
-      .min(2)
-      .max(50),
+    lastName: z.string().trim().min(2).max(50),
   }),
 });
 
