@@ -1,33 +1,32 @@
 // auth.middleware.ts
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
-import { Request, Response, NextFunction } from "express"; 
+import { Request, Response, NextFunction } from "express";
+import { verifyAccessToken } from "@/utils/jwt";
 
-
-export const authMiddleware = (
+export const authenticate = (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
+  const token = req.cookies.accessToken;
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized",
+    });
+  }
+
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as {
-      userId: string;
-    };
+    const decoded = verifyAccessToken(token);
 
     req.user = decoded;
 
     next();
   } catch {
     return res.status(401).json({
+      success: false,
       message: "Invalid token",
     });
   }

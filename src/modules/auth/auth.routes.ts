@@ -1,7 +1,7 @@
 // auth.routes.ts
 import { Router } from "express";
 import * as authController from "./auth.controller";
-import { authMiddleware } from "../../middleware/auth.middleware"; // instead of @/middleware/...
+import { authenticate } from "../../middleware/auth.middleware"; // instead of @/middleware/...
 import { validate } from "../../middleware/validate.middleware";
 
 import { registerSchema, loginSchema, refreshSchema, changePasswordSchema } from "./auth.validation";
@@ -12,6 +12,8 @@ router.post("/register", validate(registerSchema), authController.register);
 
 router.post("/login", validate(loginSchema), authController.login);
 
+router.post("/refresh", authController.refreshToken);
+
 router.get("/", (req, res) => {
   res.json({
     success: true,
@@ -19,12 +21,11 @@ router.get("/", (req, res) => {
   });
 });
 
-router.post("/refresh", validate(refreshSchema), authController.refresh);
 
-router.get("/me", authMiddleware, authController.me);
+router.get("/me", authenticate, authController.me);
 
-router.post("/logout", authMiddleware, authController.logout);
+router.post("/logout", authenticate, authController.logout);
 
-router.post("/change-password", authMiddleware, validate(changePasswordSchema), authController.changePassword);
+router.post("/change-password", authenticate, validate(changePasswordSchema), authController.changePassword);
 
 export default router;

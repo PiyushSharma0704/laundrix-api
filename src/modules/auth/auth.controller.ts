@@ -23,7 +23,25 @@ export const login = async (
 ) => {
   try {
     const result = await authService.login(req.body.email, req.body.password);
-    return successResponse(res, result, "Login successful");
+
+    res.cookie("accessToken", result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000, // 15 min
+    });
+
+    res.cookie("refreshToken", result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: "/", // restrict scope
+    });
+
+    const { accessToken, refreshToken, ...responseData } = result;
+
+    return successResponse(res, responseData, "Login successful");
   } catch (error) {
     next(error);
   }
@@ -38,36 +56,60 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-export const refresh = async (
+export const refreshToken = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const result = await authService.refresh(req.body.refreshToken);
-    return successResponse(res, result, "Token refreshed successfully");
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token missing",
+      });
+    }
+
+    const result = await authService.refresh(refreshToken);
+
+    res.cookie("accessToken", result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    return res.json({
+      success: true,
+    });
   } catch (error) {
     next(error);
   }
 };
 
-export const logout = async (
+export const logout = async (req: Request, res: Response) => {
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
+
+  return res.json({
+    success: true,
+    message: "Logged out",
+  });
+};
+
+export const changePassword = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  try {
-    const result = await authService.logout(req.user!.userId);
-    return successResponse(res, result, "Logged out successfully");
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const result = await authService.changePassword(req.user!.userId, currentPassword, newPassword);
+    const result = await authService.changePassword(
+      req.user!.userId,
+      currentPassword,
+      newPassword,
+    );
     return successResponse(res, result, "Password changed successfully");
   } catch (error) {
     next(error);
