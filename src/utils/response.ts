@@ -21,5 +21,6 @@ export const errorResponse = (
   return res.status(statusCode).json({
     success: false,
     message,
+    data: null,
   });
 };

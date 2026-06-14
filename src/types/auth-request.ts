@@ -1,8 +1,10 @@
-// auth-request.ts
+// src/types/auth-request.ts
 import { Request } from "express";
+import { UserRole } from "@prisma/client";
 
 export interface AuthRequest extends Request {
   user?: {
-    userId: string;
+    id: string;
+    role: UserRole;
   };
 }

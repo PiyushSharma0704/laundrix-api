@@ -8,16 +8,20 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "../../utils/jwt";
+import {
+  BadRequestError,
+  NotFoundError,
+  UnauthorizedError,
+  ForbiddenError,
+} from "@/utils/AppError";
 
 export const register = async (data: RegisterDto) => {
   const existingUser = await prisma.user.findUnique({
-    where: {
-      email: data.email,
-    },
+    where: { email: data.email },
   });
 
   if (existingUser) {
-    throw new Error("User already exists");
+    throw new BadRequestError("User already exists");
   }
 
   const passwordHash = await hashPassword(data.password);
@@ -32,26 +36,26 @@ export const register = async (data: RegisterDto) => {
     },
   });
 
-  const { passwordHash: _, ...safeUser } = user;
+  const { passwordHash: _, refreshToken: __, ...safeUser } = user;
 
-  return {
-    user: safeUser,
-  };
+  return { user: safeUser };
 };
 
 export const login = async (email: string, password: string) => {
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+  const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {
-    throw new Error("Invalid credentials");
+    throw new UnauthorizedError("Invalid credentials");
   }
 
   const isValid = await comparePassword(password, user.passwordHash);
 
   if (!isValid) {
-    throw new Error("Invalid credentials");
+    throw new UnauthorizedError("Invalid credentials");
+  }
+
+  if (!user.isActive) {
+    throw new ForbiddenError("Account is deactivated");
   }
 
   const accessToken = signAccessToken(user.id);
@@ -64,20 +68,14 @@ export const login = async (email: string, password: string) => {
 
   const { passwordHash, refreshToken: _, ...safeUser } = user;
 
-  return {
-    user: safeUser,
-    accessToken,
-    refreshToken,
-  };
+  return { user: safeUser, accessToken, refreshToken };
 };
 
 export const me = async (userId: string) => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
+  const user = await prisma.user.findUnique({ where: { id: userId } });
 
   if (!user) {
-    throw new Error("User not found");
+    throw new NotFoundError("User not found");
   }
 
   const { passwordHash, refreshToken, ...safeUser } = user;
@@ -88,36 +86,40 @@ export const me = async (userId: string) => {
 export const logout = async (userId: string) => {
   await prisma.user.update({
     where: { id: userId },
-    data: {
-      refreshToken: null,
-    },
+    data: { refreshToken: null },
   });
 
-  return {
-    success: true,
-  };
+  return { success: true };
 };
 
 export const refresh = async (refreshToken: string) => {
-  const payload = verifyRefreshToken(refreshToken) as {
-    userId: string;
-  };
+  let payload: { userId: string };
 
-  const user = await prisma.user.findUnique({
-    where: {
-      id: payload.userId,
-    },
-  });
+  try {
+    payload = verifyRefreshToken(refreshToken) as { userId: string };
+  } catch {
+    throw new UnauthorizedError("Invalid refresh token");
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: payload.userId } });
 
   if (!user || user.refreshToken !== refreshToken) {
-    throw new Error("Invalid refresh token");
+    throw new UnauthorizedError("Invalid refresh token");
+  }
+
+  if (!user.isActive) {
+    throw new ForbiddenError("Account is deactivated");
   }
 
   const accessToken = signAccessToken(user.id);
+  const newRefreshToken = signRefreshToken(user.id);
 
-  return {
-    accessToken,
-  };
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken: newRefreshToken },
+  });
+
+  return { accessToken, refreshToken: newRefreshToken };
 };
 
 export const changePassword = async (
@@ -127,16 +129,16 @@ export const changePassword = async (
 ) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
-  if (!user) throw new Error("User not found");
+  if (!user) throw new NotFoundError("User not found");
 
   const isValid = await comparePassword(currentPassword, user.passwordHash);
-  if (!isValid) throw new Error("Current password is incorrect");
+  if (!isValid) throw new BadRequestError("Current password is incorrect");
 
   const passwordHash = await hashPassword(newPassword);
 
   await prisma.user.update({
     where: { id: userId },
-    data: { passwordHash },
+    data: { passwordHash, refreshToken: null },
   });
 
   return { success: true };

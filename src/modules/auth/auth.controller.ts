@@ -2,6 +2,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as authService from "./auth.service";
 import { successResponse } from "../../utils/response";
+import { AuthRequest } from "@/types/auth-request";
 
 export const register = async (
   req: Request,
@@ -47,9 +48,14 @@ export const login = async (
   }
 };
 
-export const me = async (req: Request, res: Response, next: NextFunction) => {
+export const me = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const result = await authService.me(req.user!.userId);
+    const result = await authService.me(req.user!.id);
+
     return successResponse(res, result, "User fetched successfully");
   } catch (error) {
     next(error);
@@ -99,17 +105,19 @@ export const logout = async (req: Request, res: Response) => {
 };
 
 export const changePassword = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) => {
   try {
     const { currentPassword, newPassword } = req.body;
+
     const result = await authService.changePassword(
-      req.user!.userId,
+      req.user!.id,
       currentPassword,
       newPassword,
     );
+
     return successResponse(res, result, "Password changed successfully");
   } catch (error) {
     next(error);
