@@ -4,9 +4,8 @@ import { prisma } from "../../config/prisma";
 import { CreateStoreDto } from "./store.types";
 
 export const createStore = async (userId: string, data: CreateStoreDto) => {
-  const business = await prisma.business.findFirst({
+  const business = await prisma.business.findUnique({
     where: {
-      id: data.businessId,
       ownerId: userId,
     },
   });
@@ -16,11 +15,11 @@ export const createStore = async (userId: string, data: CreateStoreDto) => {
   }
 
   try {
-    return prisma.store.create({
+    return await prisma.store.create({
       data: {
         name: data.name,
         slug: data.slug,
-        businessId: data.businessId,
+        businessId: business.id,
       },
     });
   } catch (err: any) {

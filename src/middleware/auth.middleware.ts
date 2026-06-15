@@ -6,6 +6,7 @@ import { UnauthorizedError, ForbiddenError } from "@/utils/AppError";
 import { prisma } from "../config/prisma";
 
 
+
 export const authenticate = async (
   req: AuthRequest,
   res: Response,

@@ -12,6 +12,5 @@ export const createStoreSchema = z.object({
       .max(100)
       .regex(/^[a-z0-9-]+$/),
 
-    businessId: z.string().uuid(),
   }),
 });
