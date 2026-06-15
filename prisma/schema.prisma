@@ -17,35 +17,40 @@ enum UserRole {
 }
 
 model Store {
-  id          String   @id @default(uuid())
-  name        String
-  slug        String   @unique
+  id String @id @default(uuid())
 
-  email       String?
-  phone       String?
+  name String
+  slug String @unique
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  ownerId String
+  owner   User   @relation("StoreOwner", fields: [ownerId], references: [id])
 
-  users       User[]
+  users User[] @relation("StoreEmployees")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model User {
-  id            String   @id @default(uuid())
+  id             String @id @default(uuid())
 
-  email         String   @unique
-  passwordHash  String
+  email          String @unique
+  passwordHash   String
 
-  firstName     String?
-  lastName      String?
+  refreshToken   String?
 
-  role          UserRole @default(STAFF)
+  firstName      String?
+  lastName       String?
 
-  isActive      Boolean  @default(true)
+  role           UserRole
 
-  storeId       String?
-  store         Store? @relation(fields: [storeId], references: [id])
+  isActive       Boolean @default(true)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  managedStoreId String?
+  managedStore   Store? @relation("StoreEmployees", fields: [managedStoreId], references: [id])
+
+  storesOwned    Store[] @relation("StoreOwner")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
