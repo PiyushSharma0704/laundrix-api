@@ -22,8 +22,9 @@ model Business {
   name String
   slug String @unique
 
-  ownerId String
-  owner   User   @relation("BusinessOwner", fields: [ownerId], references: [id])
+  ownerId String @unique
+
+  owner User @relation(fields: [ownerId], references: [id])
 
   stores Store[]
 
@@ -52,25 +53,24 @@ model Store {
 model User {
   id String @id @default(uuid())
 
-  email        String  @unique
+  email String @unique
   passwordHash String
 
   refreshToken String?
 
   firstName String?
-  lastName  String?
+  lastName String?
 
   role UserRole
 
   isActive Boolean @default(true)
 
-  businessesOwned Business[]      @relation("BusinessOwner")
-  storeAccess     StoreEmployee[]
+  business Business?
+
+  storeAccess StoreEmployee[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@index([role])
 }
 
 model StoreEmployee {

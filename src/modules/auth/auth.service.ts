@@ -72,7 +72,20 @@ export const login = async (email: string, password: string) => {
 };
 
 export const me = async (userId: string) => {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    include: {
+      business: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+    },
+  });
 
   if (!user) {
     throw new NotFoundError("User not found");
