@@ -1,15 +1,7 @@
 // error.middleware.ts
 import { Request, Response, NextFunction } from "express";
-
-const STATUS_MAP: Record<string, number> = {
-  "Invalid credentials": 400,
-  "User already exists": 400,
-  "Store slug already exists": 400,
-  "User not found": 404,
-  "Invalid refresh token": 401,
-  "Account is deactivated": 403,
-  "Current password is incorrect": 400,
-};
+import { Prisma } from "@prisma/client";
+import { AppError } from "@/utils/AppError";
 
 export const errorMiddleware = (
   err: any,
@@ -17,13 +9,27 @@ export const errorMiddleware = (
   res: Response,
   next: NextFunction,
 ) => {
-  console.error("ERROR:", err.message);
+  console.error("ERROR:", err);
 
-  const statusCode = err.statusCode || STATUS_MAP[err.message] || 500;
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      data: null,
+    });
+  }
 
-  return res.status(statusCode).json({
-    status: false,
-    message: err.message || "Internal Server Error",
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+    return res.status(400).json({
+      success: false,
+      message: "A record with this value already exists",
+      data: null,
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: "Internal Server Error",
     data: null,
   });
 };
