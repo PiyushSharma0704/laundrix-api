@@ -1,7 +1,8 @@
-// src/modules/stores/store.validation.ts
+// business.validation.ts
+
 import { z } from "zod";
 
-export const createStoreSchema = z.object({
+export const createBusinessSchema = z.object({
   body: z.object({
     name: z.string().trim().min(3).max(100),
 
@@ -11,7 +12,5 @@ export const createStoreSchema = z.object({
       .min(3)
       .max(100)
       .regex(/^[a-z0-9-]+$/),
-
-    businessId: z.string().uuid(),
   }),
 });

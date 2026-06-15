@@ -94,14 +94,21 @@ export const refreshToken = async (
   }
 };
 
-export const logout = async (req: Request, res: Response) => {
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
+export const logout = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    await authService.logout(req.user!.id);
 
-  return res.json({
-    success: true,
-    message: "Logged out",
-  });
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+
+    return successResponse(res, null, "Logged out successfully");
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const changePassword = async (

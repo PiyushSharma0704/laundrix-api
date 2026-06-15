@@ -16,41 +16,141 @@ enum UserRole {
   STAFF
 }
 
-model Store {
+model Business {
   id String @id @default(uuid())
 
   name String
   slug String @unique
 
   ownerId String
-  owner   User   @relation("StoreOwner", fields: [ownerId], references: [id])
+  owner   User   @relation("BusinessOwner", fields: [ownerId], references: [id])
 
-  users User[] @relation("StoreEmployees")
+  stores Store[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+model Store {
+  id String @id @default(uuid())
+
+  name String
+  slug String @unique
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  employees StoreEmployee[]
+  customers CustomerStore[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+}
+
 model User {
-  id             String @id @default(uuid())
+  id String @id @default(uuid())
 
-  email          String @unique
-  passwordHash   String
+  email        String  @unique
+  passwordHash String
 
-  refreshToken   String?
+  refreshToken String?
 
-  firstName      String?
-  lastName       String?
+  firstName String?
+  lastName  String?
 
-  role           UserRole
+  role UserRole
 
-  isActive       Boolean @default(true)
+  isActive Boolean @default(true)
 
-  managedStoreId String?
-  managedStore   Store? @relation("StoreEmployees", fields: [managedStoreId], references: [id])
+  businessesOwned Business[]      @relation("BusinessOwner")
+  storeAccess     StoreEmployee[]
 
-  storesOwned    Store[] @relation("StoreOwner")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  @@index([role])
+}
+
+model StoreEmployee {
+  storeId String
+  userId  String
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role UserRole
+
+  createdAt DateTime @default(now())
+
+  @@id([storeId, userId])
+  @@index([userId])
+}
+
+model Customer {
+  id String @id @default(uuid())
+
+  firstName String
+  lastName  String?
+
+  phone     String
+  dialCode  String  @default("+91")
+
+  email String?
+
+  notes String?
+
+  isActive Boolean @default(true)
+
+  stores    CustomerStore[]
+  
+  addresses Address[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([phone, dialCode])
+}
+
+model Address {
+  id String @id @default(uuid())
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  label String?
+
+  buildingName String?
+  landmark     String?
+  locality     String?
+
+  city  String?
+  state String?
+
+  pincode  String?
+  countryCode String? @default("IN")
+
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+}
+
+
+model CustomerStore {
+  customerId String
+  storeId    String
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  store    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  customerCode String?
+
+  createdAt DateTime @default(now())
+
+  @@id([customerId, storeId])
+  @@index([storeId])
 }
