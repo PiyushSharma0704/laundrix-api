@@ -1,6 +1,6 @@
 // src/modules/customers/customer.controller.ts
 
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import * as customerService from "./customer.service";
 import {
   CreateCustomerDto,
@@ -8,14 +8,23 @@ import {
   CustomerQuery,
 } from "./customer.types";
 import { successResponse } from "@/utils/response";
+import { AuthRequest } from "@/types/auth-request";
+import { validateStoreAccess } from "@/middleware/store-access";
+import { ForbiddenError } from "@/utils/AppError";
 
 export const createCustomerHandler = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) => {
   try {
     const payload: CreateCustomerDto = req.body;
+
+    if (!payload.storeId) {
+      throw new ForbiddenError("storeId is required");
+    }
+
+    await validateStoreAccess(req.user!.id, payload.storeId);
 
     const customer = await customerService.createCustomer(payload);
 
@@ -26,13 +35,19 @@ export const createCustomerHandler = async (
 };
 
 export const getCustomerHandler = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) => {
   try {
     const id = req.params.id as string;
     const storeId = req.query.storeId as string;
+
+    if (!storeId) {
+      throw new ForbiddenError("storeId is required");
+    }
+
+    await validateStoreAccess(req.user!.id, storeId);
 
     const customer = await customerService.getCustomerById(id, storeId);
 
@@ -43,12 +58,18 @@ export const getCustomerHandler = async (
 };
 
 export const getCustomersHandler = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) => {
   try {
     const storeId = req.query.storeId as string;
+
+    if (!storeId) {
+      throw new ForbiddenError("storeId is required");
+    }
+
+    await validateStoreAccess(req.user!.id, storeId);
 
     const query: CustomerQuery = {
       page: req.query.page ? Number(req.query.page) : undefined,
@@ -65,13 +86,19 @@ export const getCustomersHandler = async (
 };
 
 export const updateCustomerHandler = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) => {
   try {
     const id = req.params.id as string;
     const storeId = req.query.storeId as string;
+
+    if (!storeId) {
+      throw new ForbiddenError("storeId is required");
+    }
+
+    await validateStoreAccess(req.user!.id, storeId);
 
     const payload: UpdateCustomerDto = req.body;
 
@@ -84,13 +111,19 @@ export const updateCustomerHandler = async (
 };
 
 export const deleteCustomerHandler = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) => {
   try {
     const id = req.params.id as string;
     const storeId = req.query.storeId as string;
+
+    if (!storeId) {
+      throw new ForbiddenError("storeId is required");
+    }
+
+    await validateStoreAccess(req.user!.id, storeId);
 
     const result = await customerService.deleteCustomer(id, storeId);
 
