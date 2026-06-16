@@ -16,7 +16,6 @@ const router = Router();
 
 router.use(authenticate);
 
-router.post("/create", validate(createCustomerSchema), createCustomerHandler);
 router.post("/", validate(createCustomerSchema), createCustomerHandler);
 router.get("/", getCustomersHandler);
 router.get("/:id", getCustomerHandler);

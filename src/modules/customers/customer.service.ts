@@ -2,7 +2,12 @@
 
 import { prisma } from "@/config/prisma";
 import { AppError } from "../../utils/AppError";
-import { CreateCustomerDto, UpdateCustomerDto, CustomerQuery } from "./customer.types";
+import {
+  CreateCustomerDto,
+  UpdateCustomerDto,
+  CustomerQuery,
+} from "./customer.types";
+import { ensureCustomerExists } from "@/utils/helpers";
 
 export const createCustomer = async (payload: CreateCustomerDto) => {
   const existingCustomer = await prisma.customer.findUnique({
@@ -93,8 +98,18 @@ export const getCustomers = async (storeId: string, query: CustomerQuery) => {
     ...(query.search
       ? {
           OR: [
-            { firstName: { contains: query.search, mode: "insensitive" as const } },
-            { lastName: { contains: query.search, mode: "insensitive" as const } },
+            {
+              firstName: {
+                contains: query.search,
+                mode: "insensitive" as const,
+              },
+            },
+            {
+              lastName: {
+                contains: query.search,
+                mode: "insensitive" as const,
+              },
+            },
             { phone: { contains: query.search } },
             { email: { contains: query.search, mode: "insensitive" as const } },
           ],
@@ -132,7 +147,7 @@ export const getCustomers = async (storeId: string, query: CustomerQuery) => {
 export const updateCustomer = async (
   id: string,
   storeId: string,
-  payload: UpdateCustomerDto
+  payload: UpdateCustomerDto,
 ) => {
   const existingLink = await prisma.customerStore.findUnique({
     where: {

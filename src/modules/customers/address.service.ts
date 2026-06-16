@@ -4,24 +4,31 @@ import { prisma } from "../../config/prisma";
 import { CreateAddressDto, UpdateAddressDto } from "./address.types";
 
 import { NotFoundError } from "../../utils/AppError";
+import { ensureCustomerExists } from "@/utils/helpers";
 
 export const createAddress = async (
   customerId: string,
   payload: CreateAddressDto,
 ) => {
-  const customer = await prisma.customer.findUnique({
-    where: { id: customerId },
-  });
-
-  if (!customer) {
-    throw new NotFoundError("Customer not found");
-  }
+  await ensureCustomerExists(customerId);
 
   return prisma.$transaction(async (tx) => {
-    if (payload.isDefault) {
+    const existingCount = await tx.address.count({
+      where: {
+        customerId,
+      },
+    });
+
+    const isDefault = existingCount === 0 ? true : (payload.isDefault ?? false);
+
+    if (isDefault) {
       await tx.address.updateMany({
-        where: { customerId },
-        data: { isDefault: false },
+        where: {
+          customerId,
+        },
+        data: {
+          isDefault: false,
+        },
       });
     }
 
@@ -29,6 +36,7 @@ export const createAddress = async (
       data: {
         customerId,
         ...payload,
+        isDefault,
       },
     });
   });
@@ -87,12 +95,36 @@ export const updateAddress = async (
 };
 
 export const deleteAddress = async (customerId: string, addressId: string) => {
-  await getAddressById(customerId, addressId);
+  const address = await getAddressById(customerId, addressId);
 
-  await prisma.address.delete({
-    where: {
-      id: addressId,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.address.delete({
+      where: {
+        id: addressId,
+      },
+    });
+
+    if (address.isDefault) {
+      const nextAddress = await tx.address.findFirst({
+        where: {
+          customerId,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
+      if (nextAddress) {
+        await tx.address.update({
+          where: {
+            id: nextAddress.id,
+          },
+          data: {
+            isDefault: true,
+          },
+        });
+      }
+    }
   });
 
   return {
