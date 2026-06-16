@@ -1,55 +1,53 @@
 name: Deploy Laundrix API
 
 on:
-push:
-branches:
-- main
+  push:
+    branches:
+      - main
 
 jobs:
-deploy:
-runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-```
-steps:
-  - name: Checkout Repository
-    uses: actions/checkout@v4
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
 
-  - name: Deploy to EC2
-    uses: appleboy/ssh-action@v1.2.0
-    with:
-      host: ${{ secrets.EC2_HOST }}
-      username: ${{ secrets.EC2_USER }}
-      key: ${{ secrets.EC2_SSH_KEY }}
-      script: |
-        set -e
+            cd ~/laundrix-api
 
-        cd ~/laundrix-api
+            echo "Fetching latest code..."
+            git fetch origin
 
-        echo "Fetching latest code..."
-        git fetch origin
+            echo "Resetting to latest main..."
+            git reset --hard origin/main
 
-        echo "Resetting to latest main..."
-        git reset --hard origin/main
+            echo "Cleaning untracked files..."
+            git clean -fd
 
-        echo "Cleaning untracked files..."
-        git clean -fd
+            echo "Installing dependencies..."
+            npm install
 
-        echo "Installing dependencies..."
-        npm install
+            echo "Generating Prisma Client..."
+            npx prisma generate
 
-        echo "Generating Prisma Client..."
-        npx prisma generate
+            echo "Running migrations..."
+            npx prisma migrate deploy
 
-        echo "Running migrations..."
-        npx prisma migrate deploy
+            echo "Building application..."
+            npm run build
 
-        echo "Building application..."
-        npm run build
+            echo "Restarting PM2..."
+            pm2 restart laundrix-api --update-env
 
-        echo "Restarting PM2..."
-        pm2 restart laundrix-api --update-env
+            echo "Saving PM2..."
+            pm2 save
 
-        echo "Saving PM2..."
-        pm2 save
-
-        echo "Deployment completed!"
+            echo "Deployment completed!"
