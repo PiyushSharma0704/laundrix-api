@@ -5,8 +5,6 @@ import { verifyAccessToken } from "../utils/jwt";
 import { UnauthorizedError, ForbiddenError } from "@/utils/AppError";
 import { prisma } from "../config/prisma";
 
-
-
 export const authenticate = async (
   req: AuthRequest,
   res: Response,
@@ -28,7 +26,19 @@ export const authenticate = async (
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, role: true, isActive: true },
+      select: {
+        id: true,
+        role: true,
+        isActive: true,
+
+        business: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -39,7 +49,11 @@ export const authenticate = async (
       throw new ForbiddenError("Account is deactivated");
     }
 
-    req.user = { id: user.id, role: user.role };
+    req.user = {
+      id: user.id,
+      role: user.role,
+      business: user.business,
+    };
 
     next();
   } catch (error) {

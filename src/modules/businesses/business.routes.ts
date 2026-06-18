@@ -13,7 +13,7 @@ router.use(authenticate);
 
 router.post(
   "/create",
-  authorize("SUPER_ADMIN", "OWNER"),
+  authorize("PLATFORM_SUPER_ADMIN", "BUSINESS_OWNER"),
   validate(createBusinessSchema),
   businessController.createBusiness,
 );

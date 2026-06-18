@@ -32,7 +32,7 @@ export const register = async (data: RegisterDto) => {
       passwordHash,
       firstName: data.firstName,
       lastName: data.lastName,
-      role: UserRole.OWNER,
+      role: UserRole.BUSINESS_OWNER,
     },
   });
 

@@ -7,9 +7,23 @@ import {
   UpdateCustomerDto,
   CustomerQuery,
 } from "./customer.types";
-import { ensureCustomerExists } from "@/utils/helpers";
+import {
+  ensureCustomerAccessible,
+  generateCustomerCode,
+} from "@/utils/helpers";
+import { AuthUser } from "@/types/auth-request";
+import { getAccessibleStoreIds } from "@/middleware/access-scope";
 
-export const createCustomer = async (payload: CreateCustomerDto) => {
+export const createCustomer = async (
+  user: AuthUser,
+  payload: CreateCustomerDto,
+) => {
+  const accessibleStoreIds = await getAccessibleStoreIds(user.id, user.role);
+
+  if (accessibleStoreIds && !accessibleStoreIds.includes(payload.storeId)) {
+    throw new AppError("You cannot create customers in this store", 403);
+  }
+
   const existingCustomer = await prisma.customer.findUnique({
     where: {
       phone_dialCode: {
@@ -30,89 +44,79 @@ export const createCustomer = async (payload: CreateCustomerDto) => {
     });
 
     if (!existingLink) {
+      const customerCode = await generateCustomerCode(payload.storeId);
+
       await prisma.customerStore.create({
         data: {
           customerId: existingCustomer.id,
           storeId: payload.storeId,
+          customerCode,
         },
       });
     }
 
     return existingCustomer;
   }
+  const customerCode = await generateCustomerCode(payload.storeId);
 
   const customer = await prisma.customer.create({
     data: {
       firstName: payload.firstName,
       lastName: payload.lastName,
-
       phone: payload.phone,
       dialCode: payload.dialCode || "+91",
-
       email: payload.email,
       notes: payload.notes,
 
       stores: {
         create: {
           storeId: payload.storeId,
+          customerCode,
         },
       },
     },
-  });
-
-  return customer;
-};
-
-export const getCustomerById = async (id: string, storeId: string) => {
-  const customer = await prisma.customer.findUnique({
-    where: { id },
     include: {
-      addresses: true,
-      stores: {
-        where: { storeId },
-      },
+      stores: true,
     },
   });
 
-  if (!customer) {
-    throw new AppError("Customer not found", 404);
-  }
-
-  if (customer.stores.length === 0) {
-    throw new AppError("Customer not associated with this store", 404);
-  }
-
   return customer;
 };
 
-export const getCustomers = async (storeId: string, query: CustomerQuery) => {
-  const page = query.page && query.page > 0 ? query.page : 1;
-  const limit = query.limit && query.limit > 0 ? query.limit : 20;
-  const skip = (page - 1) * limit;
+export const getCustomerById = async (customerId: string, user: AuthUser) => {
+  const storeIds = await getAccessibleStoreIds(user.id, user.role);
+
+  await ensureCustomerAccessible(customerId, storeIds);
+
+  return prisma.customer.findUnique({
+    where: {
+      id: customerId,
+    },
+    include: {
+      addresses: true,
+      stores: true,
+    },
+  });
+};
+
+export const getCustomers = async (user: AuthUser, query: CustomerQuery) => {
+  const storeIds = await getAccessibleStoreIds(user.id, user.role);
+
+  const page = query.page || 1;
+  const limit = query.limit || 20;
 
   const where = {
     isActive: true,
-    stores: {
-      some: { storeId },
-    },
-    ...(query.search
+
+    ...(storeIds
       ? {
-          OR: [
-            {
-              firstName: {
-                contains: query.search,
-                mode: "insensitive" as const,
+          stores: {
+            some: {
+              storeId: {
+                in: storeIds,
               },
             },
-            {
-              lastName: {
-                contains: query.search,
-                mode: "insensitive" as const,
-              },
-            },
-            { phone: { contains: query.search } },
-            { email: { contains: query.search, mode: "insensitive" as const } },
-          ],
+          },
         }
       : {}),
   };
@@ -120,17 +124,16 @@ export const getCustomers = async (storeId: string, query: CustomerQuery) => {
   const [customers, total] = await Promise.all([
     prisma.customer.findMany({
       where,
-      skip,
+      skip: (page - 1) * limit,
       take: limit,
-      orderBy: { createdAt: "desc" },
-      include: {
-        addresses: {
-          where: { isDefault: true },
-          take: 1,
-        },
+      orderBy: {
+        createdAt: "desc",
       },
     }),
-    prisma.customer.count({ where }),
+
+    prisma.customer.count({
+      where,
+    }),
   ]);
 
   return {
@@ -145,60 +148,37 @@ export const getCustomers = async (storeId: string, query: CustomerQuery) => {
 };
 
 export const updateCustomer = async (
-  id: string,
-  storeId: string,
+  customerId: string,
+  user: AuthUser,
   payload: UpdateCustomerDto,
 ) => {
-  const existingLink = await prisma.customerStore.findUnique({
+  const storeIds = await getAccessibleStoreIds(user.id, user.role);
+
+  await ensureCustomerAccessible(customerId, storeIds);
+
+  return prisma.customer.update({
     where: {
-      customerId_storeId: {
-        customerId: id,
-        storeId,
-      },
+      id: customerId,
     },
+    data: payload,
   });
-
-  if (!existingLink) {
-    throw new AppError("Customer not found for this store", 404);
-  }
-
-  const customer = await prisma.customer.update({
-    where: { id },
-    data: {
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      email: payload.email,
-      notes: payload.notes,
-      isActive: payload.isActive,
-    },
-  });
-
-  return customer;
 };
 
-export const deleteCustomer = async (id: string, storeId: string) => {
-  const existingLink = await prisma.customerStore.findUnique({
+export const deleteCustomer = async (customerId: string, user: AuthUser) => {
+  const storeIds = await getAccessibleStoreIds(user.id, user.role);
+
+  await ensureCustomerAccessible(customerId, storeIds);
+
+  await prisma.customer.update({
     where: {
-      customerId_storeId: {
-        customerId: id,
-        storeId,
-      },
+      id: customerId,
+    },
+    data: {
+      isActive: false,
     },
   });
 
-  if (!existingLink) {
-    throw new AppError("Customer not found for this store", 404);
-  }
-
-  // Unlink from this store only — preserve customer record for other stores
-  await prisma.customerStore.delete({
-    where: {
-      customerId_storeId: {
-        customerId: id,
-        storeId,
-      },
-    },
-  });
-
-  return { success: true };
+  return {
+    success: true,
+  };
 };

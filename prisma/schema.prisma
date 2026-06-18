@@ -8,9 +8,13 @@ datasource db {
 }
 
 enum UserRole {
-  SUPER_ADMIN
-  OWNER
-  MANAGER
+  PLATFORM_SUPER_ADMIN
+  PLATFORM_ADMIN
+  PLATFORM_SUPPORT
+
+  BUSINESS_OWNER
+
+  STORE_MANAGER
   CASHIER
   DRIVER
   STAFF
@@ -37,6 +41,7 @@ model Store {
 
   name String
   slug String @unique
+  customerSequence Int @default(0)
 
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -147,7 +152,7 @@ model CustomerStore {
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   store    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  customerCode String?
+  customerCode String? @unique
 
   createdAt DateTime @default(now())
 
