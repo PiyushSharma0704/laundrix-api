@@ -13,14 +13,14 @@ router.use(authenticate);
 
 router.post(
   "/create",
-  authorize("PLATFORM_SUPER_ADMIN", "BUSINESS_OWNER"),
+  authorize("PLATFORM_SUPER_ADMIN"),
   validate(createBusinessSchema),
   businessController.createBusiness,
 );
 
 router.get(
-  "/my-businesses",
-  businessController.getMyBusinesses,
+  "/my-business",
+  businessController.getMyBusiness,
 );
 
 router.get(

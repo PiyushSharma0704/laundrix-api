@@ -12,13 +12,6 @@ import { AuthUser } from "@/types/auth-request";
 import { CreateStoreDto, UpdateStoreDto } from "./store.types";
 
 export const createStore = async (user: AuthUser, data: CreateStoreDto) => {
-  if (
-    user.role !== UserRole.PLATFORM_SUPER_ADMIN &&
-    user.role !== UserRole.BUSINESS_OWNER
-  ) {
-    throw new ForbiddenError("You cannot create stores");
-  }
-
   const business = await prisma.business.findUnique({
     where: {
       ownerId: user.id,
@@ -29,28 +22,44 @@ export const createStore = async (user: AuthUser, data: CreateStoreDto) => {
     throw new NotFoundError("Business not found");
   }
 
-  try {
-    return await prisma.store.create({
-      data: {
-        name: data.name,
-        slug: data.slug,
-        businessId: business.id,
-      },
-    });
-  } catch (err: any) {
-    if (err.code === "P2002") {
-      throw new BadRequestError("Store slug already exists");
-    }
+  const existingStore = await prisma.store.findFirst({
+    where: {
+      businessId: business.id,
+      OR: [
+        {
+          slug: data.slug,
+        },
+        {
+          code: data.code,
+        },
+      ],
+    },
+  });
 
-    throw err;
+  if (existingStore) {
+    throw new BadRequestError("Store code or slug already exists");
   }
+
+  return prisma.store.create({
+    data: {
+      businessId: business.id,
+
+      name: data.name,
+      slug: data.slug,
+      code: data.code,
+
+      phone: data.phone,
+      email: data.email,
+      address: data.address,
+    },
+  });
 };
 
 export const getStoreById = async (storeId: string, user: AuthUser) => {
   const store = await prisma.store.findFirst({
     where: {
       id: storeId,
-
+      deletedAt: null,
       OR:
         user.role === UserRole.PLATFORM_SUPER_ADMIN
           ? undefined
@@ -93,6 +102,7 @@ export const getMyStores = async (user: AuthUser) => {
 
   return prisma.store.findMany({
     where: {
+      deletedAt: null,
       OR: [
         {
           business: {
@@ -128,8 +138,33 @@ export const updateStore = async (
     },
 
     data: {
-      name: payload.name,
-      slug: payload.slug,
+      ...(payload.name && {
+        name: payload.name,
+      }),
+
+      ...(payload.slug && {
+        slug: payload.slug,
+      }),
+
+      ...(payload.code && {
+        code: payload.code,
+      }),
+
+      ...(payload.phone !== undefined && {
+        phone: payload.phone,
+      }),
+
+      ...(payload.email !== undefined && {
+        email: payload.email,
+      }),
+
+      ...(payload.address !== undefined && {
+        address: payload.address,
+      }),
+
+      ...(payload.isActive !== undefined && {
+        isActive: payload.isActive,
+      }),
     },
   });
 };
@@ -137,9 +172,14 @@ export const updateStore = async (
 export const deleteStore = async (storeId: string, user: AuthUser) => {
   await getStoreById(storeId, user);
 
-  await prisma.store.delete({
+  await prisma.store.update({
     where: {
       id: storeId,
+    },
+
+    data: {
+      isActive: false,
+      deletedAt: new Date(),
     },
   });
 
