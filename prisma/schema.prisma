@@ -27,44 +27,70 @@ model Business {
   slug String @unique
 
   ownerId String @unique
+  owner   User   @relation(fields: [ownerId], references: [id])
 
-  owner User @relation(fields: [ownerId], references: [id])
+  currencyCode String  @default("INR")
+  gstNumber    String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   stores Store[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  garmentCategories GarmentCategory[]
+  garmentTypes      GarmentType[]
+
+  serviceTypes ServiceType[]
+
+  serviceCatalogItems ServiceCatalogItem[]
 }
 
 model Store {
   id String @id @default(uuid())
 
-  name String
-  slug String @unique
-  customerSequence Int @default(0)
-
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  name String
+
+  slug String
+
+  code String
+
+  phone String?
+  email String?
+
+  address String?
+
+  customerSequence Int @default(0)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   employees StoreEmployee[]
   customers CustomerStore[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  @@unique([businessId, slug])
+  @@unique([businessId, code])
   @@index([businessId])
 }
 
 model User {
   id String @id @default(uuid())
 
-  email String @unique
+  email        String @unique
   passwordHash String
 
   refreshToken String?
 
   firstName String?
-  lastName String?
+  lastName  String?
 
   role UserRole
 
@@ -79,6 +105,8 @@ model User {
 }
 
 model StoreEmployee {
+  id String @id @default(uuid())
+
   storeId String
   userId  String
 
@@ -87,10 +115,18 @@ model StoreEmployee {
 
   role UserRole
 
-  createdAt DateTime @default(now())
+  isActive Boolean @default(true)
 
-  @@id([storeId, userId])
+  assignedAt DateTime  @default(now())
+  removedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, userId])
+  @@index([storeId])
   @@index([userId])
+  @@index([isActive])
 }
 
 model Customer {
@@ -99,8 +135,8 @@ model Customer {
   firstName String
   lastName  String?
 
-  phone     String
-  dialCode  String  @default("+91")
+  phone    String
+  dialCode String @default("+91")
 
   email String?
 
@@ -108,8 +144,8 @@ model Customer {
 
   isActive Boolean @default(true)
 
-  stores    CustomerStore[]
-  
+  stores CustomerStore[]
+
   addresses Address[]
 
   createdAt DateTime @default(now())
@@ -133,17 +169,17 @@ model Address {
   city  String?
   state String?
 
-  pincode  String?
+  pincode     String?
   countryCode String? @default("IN")
 
   isDefault Boolean @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   @@index([customerId])
 }
-
 
 model CustomerStore {
   customerId String
@@ -152,10 +188,139 @@ model CustomerStore {
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   store    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  customerCode String? @unique
+  customerCode String?
 
   createdAt DateTime @default(now())
 
   @@id([customerId, storeId])
+  @@unique([storeId, customerCode])
   @@index([storeId])
+}
+
+enum PricingUnit {
+  PIECE
+  KG
+  SQ_FT
+}
+
+model GarmentCategory {
+  id String @id @default(uuid())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  code String?
+
+  name String
+
+  description String?
+
+  imageUrl String?
+
+  sortOrder Int @default(0)
+
+  isActive Boolean @default(true)
+
+  garments GarmentType[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([businessId, name])
+  @@index([businessId])
+}
+
+model GarmentType {
+  id String @id @default(uuid())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   GarmentCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  code String?
+
+  name String
+
+  description String?
+
+  imageUrl String?
+
+  sortOrder Int @default(0)
+
+  isActive Boolean @default(true)
+
+  catalogItems ServiceCatalogItem[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([businessId, categoryId, name])
+  @@index([businessId])
+  @@index([categoryId])
+}
+
+model ServiceType {
+  id String @id @default(uuid())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  code       String?
+
+  name String
+
+  description String?
+
+  imageUrl String?
+
+  sortOrder Int @default(0)
+
+  isActive Boolean @default(true)
+
+  catalogItems ServiceCatalogItem[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([businessId, name])
+  @@index([businessId])
+}
+
+model ServiceCatalogItem {
+  id String @id @default(uuid())
+
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  serviceTypeId String
+  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id])
+
+  garmentTypeId String
+  garmentType   GarmentType @relation(fields: [garmentTypeId], references: [id])
+
+  code String?
+
+  description String?
+
+  pricingUnit PricingUnit @default(PIECE)
+
+  basePrice Decimal @db.Decimal(10, 2)
+
+  minimumPrice Decimal? @db.Decimal(10, 2)
+
+  gstRate Decimal? @db.Decimal(5, 2)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([businessId, serviceTypeId, garmentTypeId])
+  @@index([businessId, serviceTypeId, garmentTypeId, isActive])
+  @@index([businessId])
 }
