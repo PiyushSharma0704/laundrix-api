@@ -15,6 +15,11 @@ import {
   UpdateGarmentCategoryDto,
 } from "./garment-category.types";
 
+const code = `GC-${Math.random()
+  .toString(36)
+  .substring(2, 8)
+  .toUpperCase()}`;
+
 const getBusinessId = async (user: AuthUser) => {
   if (user.role !== UserRole.BUSINESS_OWNER) {
     throw new ForbiddenError(
@@ -58,8 +63,11 @@ export const createCategory = async (
   return prisma.garmentCategory.create({
     data: {
       businessId,
+
+      code,
       name: payload.name.trim(),
       description: payload.description,
+      imageUrl: payload.imageUrl,
       sortOrder: payload.sortOrder ?? 0,
     },
   });
@@ -151,9 +159,16 @@ export const updateCategory = async (
     where: {
       id: categoryId,
     },
+
     data: {
+      code,
+
       name: payload.name?.trim(),
+
       description: payload.description,
+
+      imageUrl: payload.imageUrl,
+
       sortOrder: payload.sortOrder,
     },
   });
