@@ -1,19 +1,16 @@
-export interface CreateGarmentCategoryDto {
-  code?: string;
-  name: string;
-  description?: string;
-  imageUrl?: string;
-  sortOrder?: number;
-}
+import { z } from "zod";
 
-export interface UpdateGarmentCategoryDto {
-  code?: string;
-  name?: string;
-  description?: string;
-  imageUrl?: string;
-  sortOrder?: number;
-}
+import {
+  createGarmentCategorySchema,
+  updateGarmentCategorySchema,
+  updateGarmentCategoryStatusSchema,
+} from "./garment-category.validation";
 
-export interface UpdateGarmentCategoryStatusDto {
-  isActive: boolean;
-}
+export type CreateGarmentCategoryDto =
+  z.infer<typeof createGarmentCategorySchema>["body"];
+
+export type UpdateGarmentCategoryDto =
+  z.infer<typeof updateGarmentCategorySchema>["body"];
+
+export type UpdateGarmentCategoryStatusDto =
+  z.infer<typeof updateGarmentCategoryStatusSchema>["body"];

@@ -3,6 +3,7 @@ import { prisma } from "../../config/prisma";
 import { BadRequestError, NotFoundError } from "../../utils/AppError";
 import { CreateBusinessDto } from "./business.types";
 
+
 export const createBusiness = async (
   ownerId: string,
   data: CreateBusinessDto,
