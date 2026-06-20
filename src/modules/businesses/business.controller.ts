@@ -22,15 +22,22 @@ export const createBusiness = async (
   }
 };
 
-export const getMyBusinesses = async (
+export const getMyBusiness = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const businesses = await businessService.getMyBusinesses(req.user!.id);
+    const business =
+      await businessService.getMyBusiness(
+        req.user!.id,
+      );
 
-    return successResponse(res, businesses, "Businesses fetched successfully");
+    return successResponse(
+      res,
+      business,
+      "Business fetched successfully",
+    );
   } catch (error) {
     next(error);
   }

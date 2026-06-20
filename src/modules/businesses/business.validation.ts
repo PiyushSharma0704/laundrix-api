@@ -12,5 +12,8 @@ export const createBusinessSchema = z.object({
       .min(3)
       .max(100)
       .regex(/^[a-z0-9-]+$/),
+
+    currencyCode: z.string().optional(),
+    gstNumber: z.string().optional(),
   }),
 });
